@@ -22,6 +22,10 @@ const handleUserRouter = (req, res) => {
         console.log(username, password)
         return result.then(data => {
             if(data[0]) {
+                if (data[0].userName) {
+                    req.session.username = data[0].userName
+                }
+                console.log('req.session is ', req.session)
                 return new SuccessModel(data[0], '登录成功')
             } else {
                 return new ErrorModel('用户名或密码不正确')
@@ -31,6 +35,21 @@ const handleUserRouter = (req, res) => {
             console.log(err)
             return new ErrorModel(err)
         })
+    }
+
+    if (method === 'GET' && path === '/api/user/loginCheck') {
+        console.log('sess.userid', req.session)
+
+        if (req.session.username) {
+            return Promise.resolve(
+                 new SuccessModel({
+                     session: req.session
+                 })
+            )
+        }
+        return Promise.resolve(
+            new ErrorModel('尚未登录')
+        ) 
     }
 }
 

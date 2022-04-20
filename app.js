@@ -3,8 +3,14 @@ const querystring = require('querystring')
 const handleDigestRouter = require('./src/router/digest')
 const handleUserRouter = require('./src/router/user')
 const { SuccessModel, ErrorModel} = require('./src/model/resModel')
-const { resourceLimits } = require('worker_threads')
 
+
+const getCookieExpires = () => {
+    const d = new Date()
+    d.setTime(d.getTime() + 24 * 60 * 60 * 1000)
+    console.log(d.toGMTString())
+    return d.toGMTString()
+}
 
 const SESSTION_DATA = {}
 // 处理post data
@@ -62,6 +68,25 @@ const serverHandler = (req, res) => {
         req.cookie[key] = value
     });
     console.log('cookie', req.cookie)
+
+
+    // 解析 Session
+    let needSetCookie = false
+    let userId = req.cookie.userId
+
+    if (userId) {
+        if (!SESSTION_DATA[userId]) {
+            SESSTION_DATA[userId]  = {}
+        } 
+    } else {
+            console.log(1)
+            needSetCookie = true
+            userId = `${Date.now()}_${Math.random()}}`
+            SESSTION_DATA[userId] = {}
+
+    }
+    req.session = SESSTION_DATA[userId]
+    console.log('处理', req.session)
     // 处理post Data
     getPostData(req).then(postData => {
         req.body = postData
@@ -78,6 +103,9 @@ const serverHandler = (req, res) => {
         // console.log('blog', blogResult)
         if (blogResult) {
             blogResult.then(digestData => {
+                if(needSetCookie) {
+                    res.setHeader('Set-Cookie', `usrId=${userId}; path=/; httpOnly; expires=${getCookieExpires()}`)
+                }
                 res.end(
                     JSON.stringify(digestData)
                 )
@@ -102,6 +130,9 @@ const serverHandler = (req, res) => {
         // console.log('user', userResult)
         if (userResult) {
             userResult.then(userData => {
+                if(needSetCookie) {
+                    res.setHeader('Set-Cookie', `userId=${userId}; path=/; httpOnly; expires=${getCookieExpires()}`)
+                }
                 res.end(
                     JSON.stringify(userData)
                 )
