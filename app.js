@@ -2,6 +2,7 @@
 const querystring = require('querystring')
 const handleDigestRouter = require('./src/router/digest')
 const handleUserRouter = require('./src/router/user')
+const redis = require('./src/conf/redis')
 const { SuccessModel, ErrorModel} = require('./src/model/resModel')
 
 
@@ -45,11 +46,6 @@ const getPostData = (req) => {
 
 const serverHandler = (req, res) => {
     res.setHeader('Content-type', 'application/json')
-    // const resData = {
-    //     name: 'Kekeli',
-    //     cute: 100,
-    //     env: process.env.NODE_ENV
-    // }
 
     // 解析query
     req.query = querystring.parse(req.url.split('?')[1])
@@ -58,15 +54,13 @@ const serverHandler = (req, res) => {
     const cookieStr = req.headers.cookie || ''
     req.cookie = {}
     cookieStr.split(';').forEach(item => {
-        if (!item) {
-            return
-        }
+        if (!item) return 
         const arr = item.split('=')
         const key = arr[0]
         const value = arr[1]
-
         req.cookie[key] = value
     });
+
     console.log('cookie', req.cookie)
 
 
@@ -79,28 +73,20 @@ const serverHandler = (req, res) => {
             SESSTION_DATA[userId]  = {}
         } 
     } else {
-            console.log(1)
-            needSetCookie = true
-            userId = `${Date.now()}_${Math.random()}}`
-            SESSTION_DATA[userId] = {}
-
+        needSetCookie = true
+        userId = `${Date.now()}_${Math.random()}`
+        SESSTION_DATA[userId] = {}
     }
+    console.log('data', SESSTION_DATA[userId])
     req.session = SESSTION_DATA[userId]
+
     console.log('处理', req.session)
     // 处理post Data
+
     getPostData(req).then(postData => {
         req.body = postData
 
-        // 摘录路由 
-        // const digestData = handleDigestRouter(req, res)
-        // if (digestData) {
-        //     res.end(
-        //         JSON.stringify(digestData)
-        //     )
-        //     return 
-        // }
         const blogResult = handleDigestRouter(req, res)
-        // console.log('blog', blogResult)
         if (blogResult) {
             blogResult.then(digestData => {
                 if(needSetCookie) {

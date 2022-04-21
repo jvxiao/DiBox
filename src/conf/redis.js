@@ -51,6 +51,8 @@ const close = () => {
   cli.quit()
 }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
 
+// let res = await get('name')
+// console.log(res)
 module.exports = {
   set,
   get,
