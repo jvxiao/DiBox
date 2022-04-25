@@ -9,7 +9,7 @@ cli.connect()
 // 插值
 const set = (key, value) => {
   const promise = new Promise((resolve, reject) => {
-    cli.set(key, value).then(res => {
+    cli.set(key, JSON.stringify(value)).then(res => {
       resolve(1)
     }).catch(err => {
       reject(err)
@@ -23,12 +23,16 @@ const get = (key) => {
   const promise = new Promise((resolve, reject) => {
     cli.get(key).then(res => {
       if(res) {
-        resolve(res)
+        try{
+          resolve(
+            JSON.parse(res)
+          )
+        } catch(err) {
+          resolve(res)
+        }
         return 
       }
       resolve(null)
-    }).catch(err => {
-      reject(err)
     })
   })
   return promise
@@ -50,9 +54,6 @@ const remove = (key) => {
 const close = () => {
   cli.quit()
 }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
-
-// let res = await get('name')
-// console.log(res)
 module.exports = {
   set,
   get,

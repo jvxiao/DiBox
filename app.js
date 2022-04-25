@@ -4,45 +4,8 @@ const handleDigestRouter = require('./src/router/digest')
 const handleUserRouter = require('./src/router/user')
 const redis = require('./src/conf/redis')
 const { SuccessModel, ErrorModel} = require('./src/model/resModel')
+const { getCookieExpires, getPostData} = require('./src/util/common')
 
-
-const getCookieExpires = () => {
-    const d = new Date()
-    d.setTime(d.getTime() + 24 * 60 * 60 * 1000)
-    console.log(d.toGMTString())
-    return d.toGMTString()
-}
-
-const SESSTION_DATA = {}
-// 处理post data
-const getPostData = (req) => {
-    debugger
-    const promise = new Promise((resolve, reject) => {
-        if (req.method !== 'POST') {
-            resolve ({})
-            return 
-        }
-        if (req.headers['content-type'] !== 'application/json') {
-            resolve({})
-            return 
-        }
-        // 接收数据
-        let postData = ''
-        req.on('data', chuck => {
-            postData += chuck.toString()
-        })
-        req.on('end', () => {
-            if (!postData) {
-                resolve({})
-                return 
-            }
-            resolve(
-                JSON.parse(postData)
-            )
-        })
-    })
-    return  promise
-}
 
 const serverHandler = (req, res) => {
     res.setHeader('Content-type', 'application/json')
@@ -51,8 +14,8 @@ const serverHandler = (req, res) => {
     req.query = querystring.parse(req.url.split('?')[1])
 
     // 解析cookie
-    const cookieStr = req.headers.cookie || ''
     req.cookie = {}
+    const cookieStr = req.headers.cookie || ''
     cookieStr.split(';').forEach(item => {
         if (!item) return 
         const arr = item.split('=')
@@ -61,29 +24,31 @@ const serverHandler = (req, res) => {
         req.cookie[key] = value
     });
 
-    console.log('cookie', req.cookie)
-
-
     // 解析 Session
     let needSetCookie = false
     let userId = req.cookie.userId
 
-    if (userId) {
-        if (!SESSTION_DATA[userId]) {
-            SESSTION_DATA[userId]  = {}
-        } 
-    } else {
-        needSetCookie = true
+
+    if (!userId) {
         userId = `${Date.now()}_${Math.random()}`
-        SESSTION_DATA[userId] = {}
+        needSetCookie = true
+        redis.set(userId, {})
     }
-    console.log('data', SESSTION_DATA[userId])
-    req.session = SESSTION_DATA[userId]
 
-    console.log('处理', req.session)
-    // 处理post Data
+    req.sessionId = userId
 
-    getPostData(req).then(postData => {
+    redis.get(userId).then(resData => {
+        if(resData === null) {
+            redis.set(userId, {})
+            req.session = {}
+        } else {
+            req.session = resData
+        }
+        return   getPostData(req)
+    })
+
+
+    .then(postData => {
         req.body = postData
 
         const blogResult = handleDigestRouter(req, res)
@@ -95,25 +60,15 @@ const serverHandler = (req, res) => {
                 res.end(
                     JSON.stringify(digestData)
                 )
-            }, err => {
+            }).catch(err => {
                 res.end(
                     JSON.stringify(err)
                 )
-            } )
+            })
             return
         }
         
-
-        // 用户路由
-        // const userData = handleUserRouter(req, res)
-        // if (userData) {
-        //     res.end(
-        //         JSON.stringify(userData)
-        //     )
-        //     return 
-        // }
         const userResult = handleUserRouter(req, res)
-        // console.log('user', userResult)
         if (userResult) {
             userResult.then(userData => {
                 if(needSetCookie) {
@@ -122,7 +77,7 @@ const serverHandler = (req, res) => {
                 res.end(
                     JSON.stringify(userData)
                 )
-            }, err => {
+            }).catch(err => {
                 res.end(
                     JSON.stringify(err)
                 )
@@ -131,7 +86,7 @@ const serverHandler = (req, res) => {
         }
     
         res.end('404 Not Found!')
-        })
+     })
 
 }
 
