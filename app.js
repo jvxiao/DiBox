@@ -5,10 +5,13 @@ const handleUserRouter = require('./src/router/user')
 const redis = require('./src/conf/redis')
 const { SuccessModel, ErrorModel} = require('./src/model/resModel')
 const { getCookieExpires, getPostData} = require('./src/util/common')
-
+const { logAccess }  = require('./src/util/log')
 
 const serverHandler = (req, res) => {
     res.setHeader('Content-type', 'application/json')
+
+    // 写日志
+    logAccess(`${req.method} -- ${req.url} -- ${req.headers['user-agent']} -- ${Date.now()}`)
 
     // 解析query
     req.query = querystring.parse(req.url.split('?')[1])
