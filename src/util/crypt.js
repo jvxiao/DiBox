@@ -19,7 +19,7 @@ const crypt = (content) => {
   return md5(str)
 }
 
-let result = crypt('123')
+let result = crypt('admin')
 console.log(result, result.length)
 
 module.exports = {

@@ -1,3 +1,8 @@
+/*
+ * @Descripttion: 
+ * @Author: jvxiao <jvxiao@outlook.com>
+ * @Date: 2022-04-21 21:59:22
+ */
 const mysql = require('mysql')
 const { MYSQL_CONF } = require('./db')
 
@@ -19,5 +24,6 @@ function exec(sql) {
 }
 
 module.exports = {
-  exec
+  exec,
+  escape: mysql.escape
 }
